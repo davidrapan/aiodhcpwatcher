@@ -1,5 +1,11 @@
 # Changelog
 
+## v1.2.0 (2025-05-12)
+
+### Features
+
+- Add option to select multiple interfaces (#83) ([`69019b4`](https://github.com/Bluetooth-Devices/aiodhcpwatcher/commit/69019b43a8c96a6ffc947219373fa2e14587c8da))
+
 ## v1.1.1 (2025-02-22)
 
 ### Bug fixes
