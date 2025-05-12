@@ -201,10 +201,19 @@ async def _write_test_packets_to_pipe(w: int) -> None:
             await asyncio.sleep(0)
 
 
+class MockIface:
+    index: int = 0
+
+    def __init__(self) -> None:
+        MockIface.index = MockIface.index + 1
+        self.index: int = MockIface.index
+
+
 class MockSocket:
 
     def __init__(self, reader: int, exc: type[Exception] | None = None) -> None:
         self._fileno = reader
+        self.iface = MockIface()
         self.close = MagicMock()
         self.buffer = b""
         self.exc = exc
@@ -327,7 +336,6 @@ async def test_watcher_temp_exception(caplog: pytest.LogCaptureFixture) -> None:
         requests.append(data)
 
     r, w = os.pipe()
-
     mock_socket = MockSocket(r, OSError)
     with (
         patch(
@@ -358,6 +366,59 @@ async def test_watcher_temp_exception(caplog: pytest.LogCaptureFixture) -> None:
 
         await _write_test_packets_to_pipe(w)
 
+        stop()
+
+    os.close(r)
+    os.close(w)
+    assert requests == [
+        DHCPRequest(
+            ip_address="192.168.107.151", hostname="", mac_address="60:6b:bd:59:e4:b4"
+        ),
+        DHCPRequest(
+            ip_address="192.168.210.56",
+            hostname="connect",
+            mac_address="b8:b7:f1:6d:b5:33",
+        ),
+        DHCPRequest(
+            ip_address="192.168.1.120",
+            hostname="iRobot-AE9EC12DD3B04885BCBFA36AFB01E1CC",
+            mac_address="50:14:79:03:85:2c",
+        ),
+        DHCPRequest(
+            ip_address="192.168.107.151", hostname="", mac_address="60:6b:bd:59:e4:b4"
+        ),
+        DHCPRequest(
+            ip_address="192.168.210.56",
+            hostname="connec�",
+            mac_address="b8:b7:f1:6d:b5:33",
+        ),
+        DHCPRequest(
+            ip_address="192.168.210.56",
+            hostname="ó",
+            mac_address="b8:b7:f1:6d:b5:33",
+        ),
+    ]
+
+
+@pytest.mark.asyncio
+async def test_watcher_if_indexes(caplog: pytest.LogCaptureFixture) -> None:
+    """Test mocking a dhcp packet to the watcher."""
+    requests: list[DHCPRequest] = []
+
+    def _handle_dhcp_packet(data: DHCPRequest) -> None:
+        requests.append(data)
+
+    r, w = os.pipe()
+    mock_socket = MockSocket(r)
+    with (
+        patch(
+            "aiodhcpwatcher.AIODHCPWatcher._make_listen_socket",
+            return_value=mock_socket,
+        ),
+        patch("aiodhcpwatcher.AIODHCPWatcher._verify_working_pcap"),
+    ):
+        stop = await async_start(_handle_dhcp_packet, if_indexes=[1, 2])
+        await _write_test_packets_to_pipe(w)
         stop()
 
     os.close(r)
