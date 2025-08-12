@@ -1,5 +1,11 @@
 # Changelog
 
+## v1.2.1 (2025-08-12)
+
+### Bug fixes
+
+- Update format string as if_index may be a string on some platforms (#94) ([`4fb0474`](https://github.com/Bluetooth-Devices/aiodhcpwatcher/commit/4fb04742e28dc986cc6ee44ee015bcf237d2011d))
+
 ## v1.2.0 (2025-05-12)
 
 ### Features
